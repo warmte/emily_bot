@@ -16,5 +16,5 @@ def set_state(user_id, value):
             db[user_id] = value
             return True
         except:
-            # TODO: как-то обработать ситуацию
+            # TODO: do something
             return False

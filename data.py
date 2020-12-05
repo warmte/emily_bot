@@ -10,6 +10,7 @@ class Button(config.Enum):
     B_YES = 'Да'
     B_NO = 'Нет'
     B_TO_MAIN_MENU = 'В главное меню'
+    B_BACK = 'Назад'
 
     B_MENU_MOOD = 'Отметить настроение'
     B_MENU_ABOUT = 'Обо мне'
@@ -20,40 +21,93 @@ class Button(config.Enum):
     B_SETTINGS_NOTIFICATIONS_CHANGE = 'Изменить время напоминаний'
     B_SETTINGS_NOTIFICATION_REMOVE = 'Отменить напоминания'
 
+    E_ANGER = 'Гнев'
+    E_FEAR = 'Страх'
+    E_SADNESS = 'Печаль'
+    E_JOY = 'Радость'
+
 
 hello = telebot.types.ReplyKeyboardMarkup(True, True)
-hello.row(Button.B_HELLO)
+hello.row(Button.B_HELLO.value)
 
 yes_or_no = telebot.types.ReplyKeyboardMarkup(True, True)
-yes_or_no.row(Button.B_YES, Button.B_NO)
+yes_or_no.row(Button.B_YES.value, Button.B_NO.value)
 
 to_main_menu = telebot.types.ReplyKeyboardMarkup(True, True)
-to_main_menu.row(Button.B_TO_MAIN_MENU)
+to_main_menu.row(Button.B_TO_MAIN_MENU.value)
+
+back_or_to_main_menu = telebot.types.ReplyKeyboardMarkup(True, True)
+back_or_to_main_menu.row(Button.B_BACK.value, Button.B_TO_MAIN_MENU.value)
 
 main_menu = telebot.types.ReplyKeyboardMarkup(True, True)
-main_menu.row(Button.B_MENU_MOOD, Button.B_MENU_ABOUT)
-main_menu.row(Button.B_MENU_STAT, Button.B_MENU_SETTINGS)
+main_menu.row(Button.B_MENU_MOOD.value, Button.B_MENU_ABOUT.value)
+main_menu.row(Button.B_MENU_STAT.value, Button.B_MENU_SETTINGS.value)
 
 settings = telebot.types.ReplyKeyboardMarkup(True, True)
-settings.row(Button.B_SETTINGS_TIME_ZONE)
-settings.row(Button.B_SETTINGS_NOTIFICATIONS_CHANGE)
-settings.row(Button.B_SETTINGS_NOTIFICATION_REMOVE)
-settings.row(Button.B_TO_MAIN_MENU)
+settings.row(Button.B_SETTINGS_TIME_ZONE.value)
+settings.row(Button.B_SETTINGS_NOTIFICATIONS_CHANGE.value)
+settings.row(Button.B_SETTINGS_NOTIFICATION_REMOVE.value)
+settings.row(Button.B_TO_MAIN_MENU.value)
 
-M_WELCOME_MESSAGE = 'Привет! Меня зовут Ванда и я помогу тебе следить за своим настроением.'
+mood_groups = telebot.types.ReplyKeyboardMarkup(True, True)
+mood_groups.row(Button.E_ANGER.value, Button.E_FEAR.value)
+mood_groups.row(Button.E_SADNESS.value, Button.E_JOY.value)
+mood_groups.row(Button.B_TO_MAIN_MENU.value)
+
+mood_anger = ['Бешенство', 'Ярость', 'Злость', 'Раздражение',
+              'Ненависть', 'Презрение', 'Отвращение', 'Неприязнь',
+              'Возмущение', 'Негодование', 'Уязвленность', 'Обида',
+              'Ожесточение', 'Зависть', 'Досада']
+
+mood_fear = ['Ужас', 'Испуг', 'Тревога', 'Беспокойство',
+             'Опасение', 'Растерянность', 'Робость']
+
+mood_sadness = ['Скорбь', 'Горе', 'Тоска', 'Грусть',
+                'Отчаяние', 'Уныние', 'Опустошенность', 'Беспомощность',
+                'Жалость', 'Сожаление', 'Бессилие', 'Подавленность']
+
+mood_joy = ['Восторг', 'Восхищение', 'Упоение', 'Ликование',
+            'Счастье', 'Радость', 'Приподнятость', 'Умиротворение',
+            'Любовь', 'Нежность', 'Гордость', 'Благодарность',
+            'Вдохновение', 'Наслаждение']
+
+M_SEP = '\n\n'
+
+M_WELCOME_MESSAGE = 'Привет! Меня зовут Ванда и я помогу тебе следить за своим настроением и эмоциями.'
 M_WELCOME_NOTIFICATIONS = 'Ты хочешь получать напоминания? Я буду писать тебе ежедневно в выбранное время, ' \
                           'чтобы помочь не забыть отметить своё настроение.'
 
 M_NOTIFICATIONS_TIME_QUESTION = 'Отлично! Скажи, пожалуйста, во сколько ты хочешь получать напоминание? '
-M_NOTIFICATIONS_TIME_FORMAT = 'Напиши время в формате \"h:mm или hh:mm\", как, например, 7:00 или 14:00.'
+M_NOTIFICATIONS_TIME_FORMAT = 'Напиши время в формате \"h:mm\" или \"hh:mm\", как, например, 7:00 или 14:00.'
 M_NOTIFICATIONS_DONE = 'Спасибо, напоминания будут приходить ежедневно в '
 M_NOTIFICATIONS_REMOVE = 'Ты хочешь отменить напоминания? Я больше не буду ежедневно тебе писать, ' \
                          'но ты всё ещё будешь иметь возможность отметить своё настроение из главного меню.'
-M_NOTIFICATIONS_CANCELLED = 'Ежедневные напоминания отменены'
-M_NOTIFICATIONS_NOT_CANCELLED = 'Ежедневные напоминания не были отменены'
+M_NOTIFICATIONS_CANCELLED = 'Ежедневные напоминания отменены.'
+M_NOTIFICATIONS_NOT_CANCELLED = 'Ежедневные напоминания не были отменены.'
 
 M_MAIN_MENU = 'Добро пожаловать в главное меню.'
 M_SETTINGS = 'Здесь ты можешь настроить свой часовой пояс и напоминания.'
+
+M_ABOUT = 'Это Ванда — бот, который помогает отслеживать настроение и эмоции.\n\n' \
+          'Любая эмоция — это реакция организма на внешние воздействия, и здоровый подход к ' \
+          'эмоциям предполагает, что все они важны для душевной гармонии. Эмоции — это маяки, которые подают сигнал: ' \
+          'здесь комфортно, там опасно, с этим человеком можно подружиться, а того лучше остерегаться. Именно поэтому ' \
+          'важно научиться осознавать свои эмоции, и для того, чтобы помочь в этом нелегком деле, была создана Ванда.' \
+          '\n\n' \
+          'Эмоции можно отмечать раз в час, а запрашивать статистику - раз в сутки. Это сделано, чтобы исключить' \
+          'возможность бездумно засылать десяток эмоций, не размышляя особо, что конкретно ты сейчас чувствуешь.\n\n' \
+          'Если у тебя есть пожелания, предложения или вопросы, то ' \
+          'заполни, пожалуйста, форму. Любой фидбек приветствуется и помогает Ванде становиться лучше :)'
+
+M_MOOD_START = 'Для твоего удобства все эмоции разбиты по группам. Выбери, пожалуйста, группу, которой соответствует' \
+               ' твоя эмоция. Если ошибёшься, ничего страшного: всегда можно будет вернуться в это меню и выбрать ' \
+               'другую группу.'
+M_MOOD_UNKNOWN_GROUP = 'Выбери, пожалуйста, одну группу из предложенных.'
+M_MOOD_EMOTION = 'Прислушайся к себе, выбери эмоцию из списка и сообщи её мне. Учти, что тебе нужно написать ' \
+                 'всего одну эмоцию, и она обязательно должна быть из списка выше. Если ты не видишь в списке ' \
+                 'подходящую эмоцию, то, возможно, тебе стоит вернуться в предыдущее меню и выбрать другую группу.'
+M_MOOD_UNKNOWN_EMOTION = 'Выбери, пожалуйста, одна эмоцию из перечисленных в списке выше.'
+M_MOOD_EMOTION_GOT = 'Спасибо, записала эту эмоцию.'
 
 
 def call_notifications(message):
@@ -64,17 +118,18 @@ def call_notifications(message):
 
 def call_notifications_exit(message):
     bot.send_message(message.chat.id,
-                     'Хорошо! Ты всегда можешь настроить напоминания в пункте "Настройки" главного меню. \n\n ',
+                     'Хорошо! Ты всегда можешь настроить напоминания в пункте "Настройки" главного меню.' + M_SEP,
                      reply_markup=main_menu)
     dbworker.set_state(message.chat.id, config.State.MAIN_MENU.value)
 
 
 def call_set_time_zone_fail(message):
     bot.send_message(message.chat.id,
-                     'Что-то пошло не так! Пожалуйста, проверь, что отправленное тобой время имеет '
+                     'Пожалуйста, проверь, что отправленное тобой время имеет '
                      'формат \"UTC+_\". Узнать свой часовой пояс можно, например, '
                      'на сайте time.is',
                      reply_markup=to_main_menu)
+    dbworker.set_state(message.chat.id, config.State.SET_TIME_ZONE.value)
 
 
 def call_set_time_zone_ask_time(hours, minutes):
@@ -85,3 +140,17 @@ def call_set_notifications_time(message):
     dbworker.set_state(message.chat.id, config.State.SET_NOTIFICATIONS.value)
     bot.send_message(message.chat.id,
                      M_NOTIFICATIONS_TIME_QUESTION + M_NOTIFICATIONS_TIME_FORMAT)
+
+
+def get_emotions_by_group(message, emotions_list):
+    dbworker.set_state(message.chat.id, config.State.SET_EMOTION.value)
+    bot.send_message(message.chat.id, M_MOOD_EMOTION + M_SEP)
+    bot.send_message(message.chat.id, ''.join(str('·  ' + e + '\n') for e in emotions_list),
+                     reply_markup=back_or_to_main_menu)
+
+
+def call_mood_exit(message):
+    bot.send_message(message.chat.id,
+                     'Хорошо! Ты можешь вернуться в любое время.' + M_SEP,
+                     reply_markup=main_menu)
+    dbworker.set_state(message.chat.id, config.State.MAIN_MENU.value)

@@ -1,8 +1,6 @@
-import telebot
 import dbworker
 import config
-
-bot = telebot.TeleBot(config.token)
+from aiogram import types
 
 
 class Button(config.Enum):
@@ -10,7 +8,7 @@ class Button(config.Enum):
     B_YES = 'Да'
     B_NO = 'Нет'
     B_TO_MAIN_MENU = 'В главное меню'
-    B_BACK = 'Назад'
+    B_BACK = '<< Назад'
 
     B_MENU_MOOD = 'Отметить настроение'
     B_MENU_ABOUT = 'Обо мне'
@@ -27,29 +25,29 @@ class Button(config.Enum):
     E_JOY = 'Радость'
 
 
-hello = telebot.types.ReplyKeyboardMarkup(True, True)
+hello = types.ReplyKeyboardMarkup(resize_keyboard=True)
 hello.row(Button.B_HELLO.value)
 
-yes_or_no = telebot.types.ReplyKeyboardMarkup(True, True)
+yes_or_no = types.ReplyKeyboardMarkup(resize_keyboard=True)
 yes_or_no.row(Button.B_YES.value, Button.B_NO.value)
 
-to_main_menu = telebot.types.ReplyKeyboardMarkup(True, True)
+to_main_menu = types.ReplyKeyboardMarkup(resize_keyboard=True)
 to_main_menu.row(Button.B_TO_MAIN_MENU.value)
 
-back_or_to_main_menu = telebot.types.ReplyKeyboardMarkup(True, True)
+back_or_to_main_menu = types.ReplyKeyboardMarkup(resize_keyboard=True)
 back_or_to_main_menu.row(Button.B_BACK.value, Button.B_TO_MAIN_MENU.value)
 
-main_menu = telebot.types.ReplyKeyboardMarkup(True, True)
+main_menu = types.ReplyKeyboardMarkup(resize_keyboard=True)
 main_menu.row(Button.B_MENU_MOOD.value, Button.B_MENU_ABOUT.value)
 main_menu.row(Button.B_MENU_STAT.value, Button.B_MENU_SETTINGS.value)
 
-settings = telebot.types.ReplyKeyboardMarkup(True, True)
+settings = types.ReplyKeyboardMarkup(resize_keyboard=True)
 settings.row(Button.B_SETTINGS_TIME_ZONE.value)
 settings.row(Button.B_SETTINGS_NOTIFICATIONS_CHANGE.value)
 settings.row(Button.B_SETTINGS_NOTIFICATION_REMOVE.value)
 settings.row(Button.B_TO_MAIN_MENU.value)
 
-mood_groups = telebot.types.ReplyKeyboardMarkup(True, True)
+mood_groups = types.ReplyKeyboardMarkup(resize_keyboard=True)
 mood_groups.row(Button.E_ANGER.value, Button.E_FEAR.value)
 mood_groups.row(Button.E_SADNESS.value, Button.E_JOY.value)
 mood_groups.row(Button.B_TO_MAIN_MENU.value)
@@ -110,47 +108,39 @@ M_MOOD_UNKNOWN_EMOTION = 'Выбери, пожалуйста, одна эмоц�
 M_MOOD_EMOTION_GOT = 'Спасибо, записала эту эмоцию.'
 
 
-def call_notifications(message):
-    bot.send_message(message.chat.id, 'Хорошо! Укажи свой часовой пояс, пожалуйста, в формате UTC+_. '
-                                      'Например, в Москве или Санкт-Петербурге время UTC+3')
+async def call_notifications(message):
+    await message.answer('Хорошо! Укажи свой часовой пояс, пожалуйста, в формате UTC+_. '
+                         'Например, в Москве или Санкт-Петербурге время UTC+3', reply_markup=to_main_menu)
     dbworker.set_state(message.chat.id, config.State.SET_TIME_ZONE.value)
 
 
-def call_notifications_exit(message):
-    bot.send_message(message.chat.id,
-                     'Хорошо! Ты всегда можешь настроить напоминания в пункте "Настройки" главного меню.' + M_SEP,
-                     reply_markup=main_menu)
+async def call_notifications_exit(message):
+    await message.answer('Хорошо! Ты всегда можешь настроить напоминания в пункте "Настройки" главного меню.' + M_SEP,
+                         reply_markup=main_menu)
     dbworker.set_state(message.chat.id, config.State.MAIN_MENU.value)
 
 
-def call_set_time_zone_fail(message):
-    bot.send_message(message.chat.id,
-                     'Пожалуйста, проверь, что отправленное тобой время имеет '
-                     'формат \"UTC+_\". Узнать свой часовой пояс можно, например, '
-                     'на сайте time.is',
-                     reply_markup=to_main_menu)
+async def call_set_time_zone_fail(message):
+    await message.answer('Пожалуйста, проверь, что отправленное тобой время имеет формат \"UTC+_\". Узнать свой '
+                         'часовой пояс можно, например, на сайте time.is', reply_markup=to_main_menu)
     dbworker.set_state(message.chat.id, config.State.SET_TIME_ZONE.value)
 
 
-def call_set_time_zone_ask_time(hours, minutes):
+async def call_set_time_zone_ask_time(hours, minutes):
     return 'Сейчас у тебя ' + hours + ':' + minutes + ', так?'
 
 
-def call_set_notifications_time(message):
+async def call_set_notifications_time(message):
     dbworker.set_state(message.chat.id, config.State.SET_NOTIFICATIONS.value)
-    bot.send_message(message.chat.id,
-                     M_NOTIFICATIONS_TIME_QUESTION + M_NOTIFICATIONS_TIME_FORMAT)
+    await message.answer(M_NOTIFICATIONS_TIME_QUESTION + M_NOTIFICATIONS_TIME_FORMAT, reply_markup=back_or_to_main_menu)
 
 
-def get_emotions_by_group(message, emotions_list):
+async def get_emotions_by_group(message, emotions_list):
     dbworker.set_state(message.chat.id, config.State.SET_EMOTION.value)
-    bot.send_message(message.chat.id, M_MOOD_EMOTION + M_SEP)
-    bot.send_message(message.chat.id, ''.join(str('·  ' + e + '\n') for e in emotions_list),
-                     reply_markup=back_or_to_main_menu)
+    await message.answer(M_MOOD_EMOTION + M_SEP)
+    await message.answer(''.join(str('·  ' + e + '\n') for e in emotions_list), reply_markup=back_or_to_main_menu)
 
 
-def call_mood_exit(message):
-    bot.send_message(message.chat.id,
-                     'Хорошо! Ты можешь вернуться в любое время.' + M_SEP,
-                     reply_markup=main_menu)
+async def call_mood_exit(message):
+    await message.answer('Хорошо! Ты можешь вернуться в любое время.' + M_SEP, reply_markup=main_menu)
     dbworker.set_state(message.chat.id, config.State.MAIN_MENU.value)

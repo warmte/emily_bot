@@ -1,6 +1,12 @@
 import dbworker
 import config
+import os
 from aiogram import types
+import pylatex as pyl
+import datetime
+import em_config
+import string
+import random
 
 
 class Button(config.Enum):
@@ -24,6 +30,9 @@ class Button(config.Enum):
     E_FEAR = 'Страх'
     E_SADNESS = 'Печаль'
     E_JOY = 'Радость'
+
+    B_STAT_WEEK = 'За последнюю неделю'
+    B_STAT_MONTH = 'С начала месяца'
 
 
 hello = types.ReplyKeyboardMarkup(resize_keyboard=True)
@@ -53,9 +62,15 @@ emotions_groups.row(Button.E_ANGER.value, Button.E_FEAR.value)
 emotions_groups.row(Button.E_SADNESS.value, Button.E_JOY.value)
 emotions_groups.row(Button.B_TO_MAIN_MENU.value)
 
+stat_menu = types.ReplyKeyboardMarkup(resize_keyboard=True)
+stat_menu.row(Button.B_STAT_WEEK.value, Button.B_STAT_MONTH.value)
+stat_menu.row(Button.B_TO_MAIN_MENU.value)
+
 M_NL = '\n\n'
 M_WS = ' '
 M_COLON = ':'
+
+S_TIME = 3
 
 
 async def move_to_state(message, state, markup, answer):
@@ -67,5 +82,34 @@ def get_hour(hours, delta, sign):
     return (24 + hours + delta * (1 if sign == '+' else -1)) % 24
 
 
-def get_minutes(minutes):
-    return '0' + str(minutes) if minutes < 10 else str(minutes)
+def get_zero_d(number):
+    return '0' + str(number) if number < 10 else str(number)
+
+
+def get_random_string(length):
+    letters = string.ascii_lowercase
+    return ''.join(random.choice(letters) for i in range(length))
+
+
+def generate_pdf(title, subtitle, records, tz, filename):
+    doc = pyl.Document(page_numbers=False, documentclass='article', document_options=['12pt'], lmodern=False)
+    doc.packages.append(pyl.Package('babel', options=['english', 'russian']))
+    doc.packages.append(pyl.Package('geometry', options=['left=1cm', 'right=1.5cm', 'top=0.3cm', 'bottom=1.2cm']))
+
+    title = pyl.NoEscape(
+        r'\normalsize {\large \textbf{' + pyl.utils.bold(title) + r'}}\\ \vspace{0.5\baselineskip}' + subtitle)
+    doc.preamble.append(pyl.Command('title', title))
+    doc.preamble.append(pyl.Command('date', pyl.NoEscape('')))
+    doc.append(pyl.NoEscape(r'\maketitle'))
+
+    doc.append(pyl.Command('vspace', pyl.NoEscape(r'-3\baselineskip')))
+    doc.append(pyl.NoEscape(r'\renewcommand\labelitemi{}'))
+    with doc.create(pyl.Itemize()) as itemize:
+        for record in records:
+            time = record['timestamp'] + datetime.timedelta(hours=tz)
+            td = str(time.hour) + M_COLON + ('0' if time.minute < 10 else '') + str(time.minute) + ', ' + str(
+                time.day) + '/' + str(time.month)
+            tex_item = pyl.NoEscape(
+                pyl.utils.bold(em_config.match(record['emotion'])) + r'$\ \cdot \ $' + td + r'\\' + record['note'])
+            itemize.add_item(tex_item)
+    doc.generate_pdf(filename, clean=True)

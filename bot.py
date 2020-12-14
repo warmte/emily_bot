@@ -252,10 +252,28 @@ async def send_text(message):
     await handle_emotion(message, 'joy')
 
 
-# --- STAT ---
+@dp.message_handler(
+    lambda message: dbworker.get_current_state(message.chat.id) == config.State.SET_EMOTION_SHAME.value,
+    content_types=['text'])
+async def send_text(message):
+    await handle_emotion(message, 'shame')
 
-def reformat_date(date):
-    return util.get_zero_d(date.day) + '.' + util.get_zero_d(date.month) + '.' + str(date.year)
+
+@dp.message_handler(
+    lambda message: dbworker.get_current_state(message.chat.id) == config.State.SET_EMOTION_SURPRISE.value,
+    content_types=['text'])
+async def send_text(message):
+    await handle_emotion(message, 'surprise')
+
+
+@dp.message_handler(
+    lambda message: dbworker.get_current_state(message.chat.id) == config.State.SET_EMOTION_INTEREST.value,
+    content_types=['text'])
+async def send_text(message):
+    await handle_emotion(message, 'interest')
+
+
+# --- STAT ---
 
 
 @dp.message_handler(
@@ -285,11 +303,12 @@ async def send_text(message):
 
 async def send_report(message, start_date, end_date, records, tz):
     with tempfile.TemporaryDirectory() as directory:
-        filename = data['report']['name'] + reformat_date(start_date) + '-' + reformat_date(end_date) + '.pdf'
+        filename = data['report']['name'] + util.reformat_date(start_date) + '-' + util.reformat_date(end_date) + '.pdf'
         path = directory + r'\report'
-        title = data['report']['title'][0] + reformat_date(start_date) + data['report']['title'][1] + reformat_date(
+        title = data['report']['title'][0] + util.reformat_date(start_date) + data['report']['title'][
+            1] + util.reformat_date(
             end_date)
-        util.generate_pdf(title, data['report']['title'][2], records, tz, path)
+        util.generate_pdf(title, data['report']['title'][2], records, tz, path, data['report']['months'])
         f = types.InputFile(path + '.pdf', filename)
         await bot.send_document(message.chat.id, f)
 

@@ -5,6 +5,7 @@ from aiogram import Bot, Dispatcher, executor, types
 import util
 import json
 import config
+import em_config
 import dbworker
 import mysqldb
 import datetime
@@ -61,7 +62,7 @@ async def send_text(message):
     if dbworker.get_current_state(message.chat.id) == config.State.SET_TIME_ZONE_SUCCESS:
         mysqldb.set_timezone(message.chat.id, util.S_TIME)
     dbworker.set_state(message.chat.id, config.State.MAIN_MENU.value)
-    await message.answer(data['menu'])
+    await message.answer(data['menu'], reply_markup=util.main_menu)
 
 
 @dp.message_handler(
@@ -70,7 +71,8 @@ async def send_text(message):
 async def send_text(message):
     if message.text.lower() == Button.B_MENU_EMOTIONS.value.lower():
         last_record_time = mysqldb.get_last_record_time(message.chat.id)
-        if last_record_time is not None and (datetime.datetime.utcnow() - last_record_time).seconds < 3600:
+        if last_record_time is not None and (datetime.datetime.utcnow() - last_record_time) < datetime.timedelta(
+                seconds=3600):
             await util.move_to_state(message, config.State.MAIN_MENU, util.main_menu, data['emotions']['time_limit'])
             return
         await util.move_to_state(message, config.State.SET_EMOTIONS, util.emotions_groups,
@@ -79,7 +81,7 @@ async def send_text(message):
         answer = data['about'][1]
         for i in range(3, 7):
             answer += data['about'][i]
-        await message.answer(answer, reply_markup=util.main_menu)
+        await message.answer(answer, reply_markup=util.main_menu, parse_mode='Markdown')
     elif message.text.lower() == Button.B_MENU_SETTINGS.value.lower():
         await util.move_to_state(message, config.State.SETTINGS, util.settings, data['settings']['info'])
     elif message.text.lower() == Button.B_MENU_STAT.value.lower():
@@ -181,12 +183,14 @@ async def send_text(message):
                                  data['ntfs_time']['remove_cancelled'])
 
 
-# EMOTIONS
+# --- EMOTIONS ---
 
-async def set_emotions_list(message, emotions_list, state):
-    dbworker.set_state(message.chat.id, state)
+async def set_emotions_list(message, e_state):
+    dbworker.set_state(message.chat.id, config.State.SET_CURRENT_EMOTION.value)
+    dbworker.set_emotion_state(message.chat.id, e_state.value)
     await message.answer(data['emotions']['pick_emotion'] + util.M_NL)
-    await message.answer(''.join(str('·  ' + e + '\n') for e in emotions_list), reply_markup=util.back_or_to_main_menu)
+    await message.answer(''.join(str('·  ' + e + '\n') for e in data['emotions'][e_state.value]),
+                         reply_markup=util.back_or_to_main_menu)
 
 
 @dp.message_handler(
@@ -198,26 +202,36 @@ async def send_text(message):
 
     group = message.text.lower()
     if group.lower() == Button.E_ANGER.value.lower():
-        await set_emotions_list(message, data['emotions']['anger'], config.State.SET_EMOTION_ANGER.value)
+        await set_emotions_list(message, config.State.SET_EMOTION_ANGER)
     elif group.lower() == Button.E_FEAR.value.lower():
-        await set_emotions_list(message, data['emotions']['fear'], config.State.SET_EMOTION_FEAR.value)
+        await set_emotions_list(message, config.State.SET_EMOTION_FEAR)
     elif group.lower() == Button.E_SADNESS.value.lower():
-        await set_emotions_list(message, data['emotions']['sadness'], config.State.SET_EMOTION_SADNESS.value)
+        await set_emotions_list(message, config.State.SET_EMOTION_SADNESS)
     elif group.lower() == Button.E_JOY.value.lower():
-        await set_emotions_list(message, data['emotions']['joy'], config.State.SET_EMOTION_JOY.value)
+        await set_emotions_list(message, config.State.SET_EMOTION_JOY)
+    elif group.lower() == Button.E_SHAME.value.lower():
+        await set_emotions_list(message, config.State.SET_EMOTION_SHAME)
+    elif group.lower() == Button.E_SURPRISE.value.lower():
+        await set_emotions_list(message, config.State.SET_EMOTION_SURPRISE)
+    elif group.lower() == Button.E_INTEREST.value.lower():
+        await set_emotions_list(message, config.State.SET_EMOTION_INTEREST)
     else:
         await message.answer(data['emotions']['unknown_group'], reply_markup=util.emotions_groups)
 
 
-async def handle_emotion(message, group):
+@dp.message_handler(
+    lambda message: dbworker.get_current_state(message.chat.id) == config.State.SET_CURRENT_EMOTION.value,
+    content_types=['text'])
+async def send_text(message):
     if await handle_back_buttons(message, config.State.SET_EMOTIONS, util.emotions_groups):
         return
+    group = dbworker.get_current_emotion_state(message.chat.id)
 
     if len(message.text) >= 2:
         emotion = message.text[0].upper() + message.text[1:].lower()
         if emotion in data['emotions'][group]:
-            mysqldb.add_record(message.chat.id, emotion, '')
-            await util.move_to_state(message, config.State.MAIN_MENU, util.main_menu, data['emotions']['ready'])
+            dbworker.set_emotion_state(message.chat.id, em_config.get(emotion))
+            await util.move_to_state(message, config.State.SET_EMOTION_NOTE, util.dont_want, data['emotions']['note'])
         else:
             await message.answer(data['emotions']['unknown_emotion'], reply_markup=util.back_or_to_main_menu)
     else:
@@ -225,52 +239,22 @@ async def handle_emotion(message, group):
 
 
 @dp.message_handler(
-    lambda message: dbworker.get_current_state(message.chat.id) == config.State.SET_EMOTION_ANGER.value,
+    lambda message: dbworker.get_current_state(message.chat.id) == config.State.SET_EMOTION_NOTE.value,
     content_types=['text'])
 async def send_text(message):
-    await handle_emotion(message, 'anger')
-
-
-@dp.message_handler(
-    lambda message: dbworker.get_current_state(message.chat.id) == config.State.SET_EMOTION_FEAR.value,
-    content_types=['text'])
-async def send_text(message):
-    await handle_emotion(message, 'fear')
-
-
-@dp.message_handler(
-    lambda message: dbworker.get_current_state(message.chat.id) == config.State.SET_EMOTION_SADNESS.value,
-    content_types=['text'])
-async def send_text(message):
-    await handle_emotion(message, 'sadness')
-
-
-@dp.message_handler(
-    lambda message: dbworker.get_current_state(message.chat.id) == config.State.SET_EMOTION_JOY.value,
-    content_types=['text'])
-async def send_text(message):
-    await handle_emotion(message, 'joy')
-
-
-@dp.message_handler(
-    lambda message: dbworker.get_current_state(message.chat.id) == config.State.SET_EMOTION_SHAME.value,
-    content_types=['text'])
-async def send_text(message):
-    await handle_emotion(message, 'shame')
-
-
-@dp.message_handler(
-    lambda message: dbworker.get_current_state(message.chat.id) == config.State.SET_EMOTION_SURPRISE.value,
-    content_types=['text'])
-async def send_text(message):
-    await handle_emotion(message, 'surprise')
-
-
-@dp.message_handler(
-    lambda message: dbworker.get_current_state(message.chat.id) == config.State.SET_EMOTION_INTEREST.value,
-    content_types=['text'])
-async def send_text(message):
-    await handle_emotion(message, 'interest')
+    note = message.text
+    if note == Button.B_DONT_WANT.value:
+        note = ''
+    if len(note) > 252:
+        message.answer(data['emotions']['note_too_big'] + len(note) + data['emotions']['note_too_big_end'],
+                       reply_markup=util.dont_want)
+    else:
+        try:
+            emotion = em_config.match(int(dbworker.get_current_emotion_state(message.chat.id)))
+            mysqldb.add_record(message.chat.id, emotion, note)
+            await util.move_to_state(message, config.State.MAIN_MENU, util.main_menu, data['emotions']['ready'])
+        except:
+            e = True
 
 
 # --- STAT ---

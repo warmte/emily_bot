@@ -80,29 +80,29 @@ def remove_ntfs(chat_id):
 # ------------------------------------
 
 def add_record(chat_id, emotion, note):
-    # try:
+    try:
         db.execute(
             'INSERT INTO `Records`(`chat_key`, `emotion`, `note`) VALUES (\'' + str(
                 config.count_key(chat_id)) + '\', ' + str(em_config.get(emotion)) + ', \'' + note + '\')')
         return True
-    # except:
-    #     return False
+    except:
+        return False
 
 
 def get_last_record_time(chat_id):
-    # try:
+    try:
         db.execute('SELECT max(`timestamp`) from `Records`')
         return db.fetchall()[0]['max(`timestamp`)']
-    # except:
-    #     return None
+    except:
+        return None
 
 
 def get_records(chat_id, datetime):
-    # try:
+    try:
         db.execute('SELECT * FROM `Records` WHERE `timestamp`>=\'' + str(datetime) + '\' ORDER BY `timestamp` DESC')
         return db.fetchall()
-    # except:
-    #     return None
+    except:
+        return None
 
 
 def delete_stat_by_chat_id(chat_id, datetime):

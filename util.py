@@ -36,6 +36,7 @@ class Button(config.Enum):
 
     B_STAT_WEEK = 'За последнюю неделю'
     B_STAT_MONTH = 'С начала месяца'
+    B_DONT_WANT = 'Не хочу'
 
 
 hello = types.ReplyKeyboardMarkup(resize_keyboard=True)
@@ -70,6 +71,9 @@ stat_menu = types.ReplyKeyboardMarkup(resize_keyboard=True)
 stat_menu.row(Button.B_STAT_WEEK.value, Button.B_STAT_MONTH.value)
 stat_menu.row(Button.B_TO_MAIN_MENU.value)
 
+dont_want = types.ReplyKeyboardMarkup(resize_keyboard=True)
+dont_want.row(Button.B_DONT_WANT.value)
+
 M_NL = '\n\n'
 M_WS = ' '
 M_COLON = ':'
@@ -103,6 +107,11 @@ def generate_pdf(title, subtitle, records, tz, filename, months):
     doc = pyl.Document(page_numbers=False, documentclass='article', document_options=['12pt'], lmodern=False)
     doc.packages.append(pyl.Package('babel', options=['english', 'russian']))
     doc.packages.append(pyl.Package('geometry', options=['left=1cm', 'right=1.5cm', 'top=0.3cm', 'bottom=1.2cm']))
+    doc.packages.append(pyl.Package('tikz'))
+    doc.packages.append(pyl.Package('enumitem'))
+
+    doc.append(pyl.NoEscape(r'\setlist{nolistsep, itemsep=0.3cm,parsep=0pt}'))
+    doc.append(pyl.NoEscape(r'\definecolor{Color}{rgb}{0.45, 0.76, 0.98}'))
 
     title = pyl.NoEscape(
         r'\normalsize {\large \textbf{' + pyl.utils.bold(title) + r'}}\\ \vspace{0.5\baselineskip}' + subtitle)
@@ -112,6 +121,9 @@ def generate_pdf(title, subtitle, records, tz, filename, months):
 
     doc.append(pyl.Command('vspace', pyl.NoEscape(r'-3\baselineskip')))
     doc.append(pyl.NoEscape(r'\renewcommand\labelitemi{}'))
+
+    line = pyl.NoEscape(
+        r'\begin{tikzpicture}[baseline]\shade[left color=Color!50!white, right color=white] rectangle (\textwidth,2pt);\end{tikzpicture}')
     with doc.create(pyl.Itemize()) as itemize:
         l_date = datetime.datetime(1000, 1, 1).date()
         for record in records:
@@ -119,11 +131,11 @@ def generate_pdf(title, subtitle, records, tz, filename, months):
             note = r'\\' + record['note'] if len(record['note']) > 0 else ''
             if time.date() != l_date:
                 if l_date != datetime.datetime(1000, 1, 1).date():
-                    itemize.add_item(r'{\tiny}')
+                    itemize.add_item(line)
                 itemize.add_item(
-                    pyl.NoEscape(r'{\large ' + str(time.day) + ' ' + months[time.month - 1] + r'}'))
+                    pyl.NoEscape(r'{' + str(time.day) + ' ' + months[time.month - 1] + r'}'))
                 l_date = time.date()
-            tex_item = pyl.NoEscape(str(time.hour) + M_COLON + get_zero_d(time.minute) + r'$\ \cdot \ $' +
+            tex_item = pyl.NoEscape(get_zero_d(time.hour) + M_COLON + get_zero_d(time.minute) + r'$\ \cdot \ $' +
                                     pyl.utils.bold(em_config.match(record['emotion'])) + note)
             itemize.add_item(tex_item)
     doc.generate_pdf(filename, clean=True)

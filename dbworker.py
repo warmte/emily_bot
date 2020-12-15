@@ -1,5 +1,6 @@
 from vedis import Vedis
 import config
+from config import logging
 
 
 def get_current_state(user_id):
@@ -15,8 +16,8 @@ def set_state(user_id, value):
         try:
             db[user_id] = value
             return True
-        except:
-            # TODO: do something
+        except Exception as e:
+            logging.error(str(user_id + 7 * 11) + ' SET_STATE ' + str(e))
             return False
 
 
@@ -33,6 +34,6 @@ def set_emotion_state(user_id, value):
         try:
             db[user_id] = value
             return True
-        except:
-            # TODO: do something
+        except Exception as e:
+            logging.error(str(user_id + 7 * 11) + ' SET_EMOTION_STATE ' + str(e))
             return False

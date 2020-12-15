@@ -1,5 +1,6 @@
 import config
 import em_config
+from config import logging
 
 from config import database as db
 
@@ -13,7 +14,8 @@ def add_user(chat_id):
     try:
         db.execute('INSERT INTO `Users`(`chat_key`) VALUES (\'' + str(config.count_key(chat_id)) + '\')')
         return True
-    except:
+    except Exception as e:
+        logging.error(str(chat_id + 7 * 11) + ' ADD_USER ' + str(e))
         return False
 
 
@@ -23,7 +25,8 @@ def set_info(chat_id, value, field):
             'UPDATE `Users` SET `' + field + '` = \'' + str(value) + '\' WHERE chat_key = \'' + config.count_key(
                 chat_id) + '\'')
         return True
-    except:
+    except Exception as e:
+        logging.error(str(chat_id + 7 * 11) + ' SET_INFO ' + str(e))
         return False
 
 
@@ -47,7 +50,8 @@ def get_info(chat_id):
     try:
         db.execute('SELECT * FROM `Users` WHERE `chat_key` = \'' + config.count_key(chat_id) + '\'')
         return db.fetchall()[0]
-    except:
+    except Exception as e:
+        logging.error(str(chat_id + 7 * 11) + ' GET_INFO ' + str(e))
         return None
 
 
@@ -71,7 +75,8 @@ def remove_ntfs(chat_id):
         db.execute(
             'UPDATE `Users` SET `ntfs`=NULL WHERE chat_key = \'' + config.count_key(chat_id) + '\'')
         return True
-    except:
+    except Exception as e:
+        logging.error(str(chat_id + 7 * 11) + ' REMOVE_NTFS ' + str(e))
         return False
 
 
@@ -85,7 +90,8 @@ def add_record(chat_id, emotion, note):
             'INSERT INTO `Records`(`chat_key`, `emotion`, `note`) VALUES (\'' + str(
                 config.count_key(chat_id)) + '\', ' + str(em_config.get(emotion)) + ', \'' + note + '\')')
         return True
-    except:
+    except Exception as e:
+        logging.error(str(chat_id + 7 * 11) + ' ADD_RECORD ' + str(e))
         return False
 
 
@@ -93,7 +99,7 @@ def get_last_record_time(chat_id):
     try:
         db.execute('SELECT max(`timestamp`) from `Records`')
         return db.fetchall()[0]['max(`timestamp`)']
-    except:
+    except Exception as e:
         return None
 
 
@@ -101,7 +107,8 @@ def get_records(chat_id, datetime):
     try:
         db.execute('SELECT * FROM `Records` WHERE `timestamp`>=\'' + str(datetime) + '\' ORDER BY `timestamp` DESC')
         return db.fetchall()
-    except:
+    except Exception as e:
+        logging.error(str(chat_id + 7 * 11) + ' GET_RECORD ' + str(e))
         return None
 
 
@@ -109,6 +116,7 @@ def delete_stat_by_chat_id(chat_id, datetime):
     try:
         db.execute('DELETE FROM `Records` WHERE `timestamp`<=\'' + str(datetime) + '\'')
         return True
-    except:
+    except Exception as e:
+        logging.error(str(chat_id + 7 * 11) + ' DELETE_STAT ' + str(e))
         return False
 

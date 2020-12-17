@@ -11,13 +11,13 @@ import random
 
 class Button(config.Enum):
     B_HELLO = 'Привет'
-    B_HELLO_VANDA = 'Привет, Ванда'
+    B_HELLO_VANDA = 'Привет, Эмили'
     B_YES = 'Да'
     B_NO = 'Нет'
     B_TO_MAIN_MENU = 'В главное меню'
     B_BACK = '<< Назад'
 
-    B_MENU_EMOTIONS = 'Отметить настроение'
+    B_MENU_EMOTIONS = 'Отметить эмоцию'
     B_MENU_ABOUT = 'Обо мне'
     B_MENU_STAT = 'Статистика'
     B_MENU_SETTINGS = 'Настройки'
@@ -86,6 +86,11 @@ async def move_to_state(message, state, markup, answer):
     dbworker.set_state(message.chat.id, state.value)
 
 
+async def move_to_state_md(message, state, markup, answer):
+    await message.answer(answer, reply_markup=markup, parse_mode='Markdown')
+    dbworker.set_state(message.chat.id, state.value)
+
+
 def get_hour(hours, delta, sign):
     return (24 + hours + delta * (1 if sign == '+' else -1)) % 24
 
@@ -110,8 +115,8 @@ def generate_pdf(title, subtitle, records, tz, filename, months):
     doc.packages.append(pyl.Package('tikz'))
     doc.packages.append(pyl.Package('enumitem'))
 
-    doc.append(pyl.NoEscape(r'\setlist{nolistsep, itemsep=0.3cm,parsep=0pt}'))
     doc.append(pyl.NoEscape(r'\definecolor{Color}{rgb}{0.45, 0.76, 0.98}'))
+    doc.append(pyl.NoEscape(r'\setlist{nolistsep, itemsep=0.5cm,parsep=0.5pt}'))
 
     title = pyl.NoEscape(
         r'\normalsize {\large \textbf{' + pyl.utils.bold(title) + r'}}\\ \vspace{0.5\baselineskip}' + subtitle)
@@ -122,20 +127,19 @@ def generate_pdf(title, subtitle, records, tz, filename, months):
     doc.append(pyl.Command('vspace', pyl.NoEscape(r'-3\baselineskip')))
     doc.append(pyl.NoEscape(r'\renewcommand\labelitemi{}'))
 
-    line = pyl.NoEscape(
-        r'\begin{tikzpicture}[baseline]\shade[left color=Color!50!white, right color=white] rectangle (\textwidth,2pt);\end{tikzpicture}')
+    line_s = pyl.NoEscape(
+        r'\begin{tikzpicture}[baseline]\shade[left color=Color!50!white, right color=white] rectangle (\textwidth,2pt);\node[inner sep=0pt,text ragged,anchor=south west,text depth=.5ex,text height=1.5ex] at (1pt,2pt) {\large ')
+    line_e = pyl.NoEscape('};\end{tikzpicture}\n')
     with doc.create(pyl.Itemize()) as itemize:
         l_date = datetime.datetime(1000, 1, 1).date()
         for record in records:
             time = record['timestamp'] + datetime.timedelta(hours=tz)
-            note = r'\\' + record['note'] if len(record['note']) > 0 else ''
+            note = r'\\' + pyl.utils.escape_latex(record['note']) if len(record['note']) > 0 else ''
+            date = ''
             if time.date() != l_date:
-                if l_date != datetime.datetime(1000, 1, 1).date():
-                    itemize.add_item(line)
-                itemize.add_item(
-                    pyl.NoEscape(r'{' + str(time.day) + ' ' + months[time.month - 1] + r'}'))
+                date = line_s + r'{' + str(time.day) + ' ' + months[time.month - 1] + r'}' + line_e
                 l_date = time.date()
-            tex_item = pyl.NoEscape(get_zero_d(time.hour) + M_COLON + get_zero_d(time.minute) + r'$\ \cdot \ $' +
+            tex_item = pyl.NoEscape(date + get_zero_d(time.hour) + M_COLON + get_zero_d(time.minute) + r'$\ \cdot \ $' +
                                     pyl.utils.bold(em_config.match(record['emotion'])) + note)
             itemize.add_item(tex_item)
     doc.generate_pdf(filename, clean=True)

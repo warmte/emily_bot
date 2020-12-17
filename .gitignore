@@ -5,3 +5,7 @@
 /tests.txt
 /.idea
 /records_db.vdb
+/app.log
+
+# Serverless directories
+.serverless

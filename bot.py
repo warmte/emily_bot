@@ -85,6 +85,12 @@ async def send_text(message):
     elif message.text.lower() == Button.B_MENU_SETTINGS.value.lower():
         await util.move_to_state(message, config.State.SETTINGS, util.settings, data['settings']['info'])
     elif message.text.lower() == Button.B_MENU_STAT.value.lower():
+        td = datetime.timedelta(hours=mysqldb.get_timezone(message.chat.id))
+        last_record_time = mysqldb.get_last_stat_time(message.chat.id)
+        if last_record_time is not None and (
+                (datetime.datetime.utcnow() + td).date() >= (last_record_time + td).date()):
+            await util.move_to_state(message, config.State.MAIN_MENU, util.main_menu, data['stat']['time_limit'])
+            return
         await util.move_to_state(message, config.State.GET_STAT, util.stat_menu, data['stat']['info'])
 
 
@@ -127,8 +133,10 @@ async def send_text(message):
         answer = data['timezone']['check_time_st'] + str(
             util.get_hour(datetime.datetime.utcnow().hour, current_time, time[3])) + util.M_COLON + util.get_zero_d(
             datetime.datetime.utcnow().minute) + data['timezone']['check_time_end']
-        mysqldb.set_timezone(message.chat.id, current_time)
-        await util.move_to_state(message, config.State.SET_TIME_ZONE_SUCCESS, util.yes_or_no, answer)
+        if mysqldb.set_timezone(message.chat.id, current_time):
+            await util.move_to_state(message, config.State.SET_TIME_ZONE_SUCCESS, util.yes_or_no, answer)
+        else:
+            await message.answer(data['error'], reply_markup=util.back_or_to_main_menu, parse_mode='Markdown')
     else:
         await message.answer(data['timezone']['fail'], reply_markup=util.back_or_to_main_menu)
 
@@ -162,10 +170,12 @@ async def send_text(message):
 
     if hours.isdigit() and minutes.isdigit() and 0 <= int(hours) < 24 and 0 <= int(minutes) < 60:
         s_hours = (int(hours) - mysqldb.get_timezone(message.chat.id) + 24) % 24
-        mysqldb.set_ntfs(message.chat.id, datetime.time(s_hours, int(minutes)))
-        d = '0' if len(minutes) == 1 else ''
-        answer = data['ntfs_time']['ready'] + hours + util.M_COLON + d + minutes
-        await util.move_to_state(message, config.State.MAIN_MENU, util.main_menu, answer)
+        if mysqldb.set_ntfs(message.chat.id, datetime.time(s_hours, int(minutes))):
+            d = '0' if len(minutes) == 1 else ''
+            answer = data['ntfs_time']['ready'] + hours + util.M_COLON + d + minutes
+            await util.move_to_state(message, config.State.MAIN_MENU, util.main_menu, answer)
+        else:
+            await message.answer(data['error'], reply_markup=util.back_or_to_main_menu, parse_mode='Markdown')
     else:
         await message.answer(data['ntfs_time']['format'], reply_markup=util.back_or_to_main_menu)
 
@@ -189,8 +199,10 @@ async def set_emotions_list(message, e_state):
     dbworker.set_state(message.chat.id, config.State.SET_CURRENT_EMOTION.value)
     dbworker.set_emotion_state(message.chat.id, e_state.value)
     await message.answer(data['emotions']['pick_emotion'] + util.M_NL)
-    await message.answer(''.join(str('·  ' + e + '\n') for e in data['emotions'][e_state.value]),
-                         reply_markup=util.back_or_to_main_menu)
+    list = ''
+    for i in range(0, len(data['emotions'][e_state.value])):
+        list += '·  ' + data['emotions'][e_state.value][i] + ' [' + str(i + 1) + '] ' + '\n'
+    await message.answer(list, reply_markup=util.back_or_to_main_menu)
 
 
 @dp.message_handler(
@@ -226,16 +238,23 @@ async def send_text(message):
     if await handle_back_buttons(message, config.State.SET_EMOTIONS, util.emotions_groups):
         return
     group = dbworker.get_current_emotion_state(message.chat.id)
+    emotion_state = dbworker.get_current_emotion_state(message.chat.id)
 
-    if len(message.text) >= 2:
+    if message.text.isnumeric() and 0 < int(message.text) <= len(data['emotions'][emotion_state]):
+        emotion = data['emotions'][emotion_state][int(message.text) - 1]
+        dbworker.set_emotion_state(message.chat.id, em_config.get(emotion))
+        await util.move_to_state(message, config.State.SET_EMOTION_NOTE, util.dont_want, data['emotions']['note'])
+    elif len(message.text) >= 2:
         emotion = message.text[0].upper() + message.text[1:].lower()
         if emotion in data['emotions'][group]:
             dbworker.set_emotion_state(message.chat.id, em_config.get(emotion))
             await util.move_to_state(message, config.State.SET_EMOTION_NOTE, util.dont_want, data['emotions']['note'])
         else:
-            await message.answer(data['emotions']['unknown_emotion'], reply_markup=util.back_or_to_main_menu)
+            await message.answer(data['emotions']['unknown_emotion'], reply_markup=util.back_or_to_main_menu,
+                                 parse_mode='Markdown')
     else:
-        await message.answer(data['emotions']['unknown_emotion'], reply_markup=util.back_or_to_main_menu)
+        await message.answer(data['emotions']['unknown_emotion'], reply_markup=util.back_or_to_main_menu,
+                             parse_mode='Markdown')
 
 
 @dp.message_handler(
@@ -246,15 +265,14 @@ async def send_text(message):
     if note == Button.B_DONT_WANT.value:
         note = ''
     if len(note) > 252:
-        message.answer(data['emotions']['note_too_big'] + len(note) + data['emotions']['note_too_big_end'],
-                       reply_markup=util.dont_want)
+        await message.answer(data['emotions']['note_too_big'] + str(len(note)) + data['emotions']['note_too_big_end'],
+                             reply_markup=util.dont_want)
     else:
-        try:
-            emotion = em_config.match(int(dbworker.get_current_emotion_state(message.chat.id)))
-            mysqldb.add_record(message.chat.id, emotion, note)
+        emotion = em_config.match(int(dbworker.get_current_emotion_state(message.chat.id)))
+        if mysqldb.add_record(message.chat.id, emotion, note):
             await util.move_to_state(message, config.State.MAIN_MENU, util.main_menu, data['emotions']['ready'])
-        except:
-            e = True
+        else:
+            await util.move_to_state_md(message, config.State.MAIN_MENU, util.main_menu, data['error'])
 
 
 # --- STAT ---
@@ -266,7 +284,6 @@ async def send_text(message):
 async def send_text(message):
     time_now = datetime.datetime.utcnow()
     tz = mysqldb.get_timezone(message.chat.id)
-    report = ''
     if message.text.lower() == Button.B_STAT_WEEK.value.lower():
         await message.answer(data['stat']['wait'])
         border_time = time_now - datetime.timedelta(days=6)
@@ -294,6 +311,7 @@ async def send_report(message, start_date, end_date, records, tz):
             end_date)
         util.generate_pdf(title, data['report']['title'][2], records, tz, path, data['report']['months'])
         f = types.InputFile(path + '.pdf', filename)
+        mysqldb.set_last_stat_time(message.chat.id, datetime.datetime.utcnow())
         await bot.send_document(message.chat.id, f)
 
 

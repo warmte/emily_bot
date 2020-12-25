@@ -288,21 +288,21 @@ async def send_text(message):
         await message.answer(data['stat']['wait'])
         border_time = time_now - datetime.timedelta(days=6)
         border = datetime.datetime(border_time.year, border_time.month, border_time.day)
-        await send_report(message, (border + datetime.timedelta(hours=tz)).date(),
+        await send_report(message.chat.id, (border + datetime.timedelta(hours=tz)).date(),
                           (time_now + datetime.timedelta(hours=tz)).date(),
                           mysqldb.get_records(message.chat.id, border), tz)
     elif message.text.lower() == Button.B_STAT_MONTH.value.lower():
         await message.answer(data['stat']['wait'])
         border_time = datetime.datetime.utcnow()
         border = datetime.datetime(border_time.year, border_time.month, 1)
-        await send_report(message, (border + datetime.timedelta(hours=tz)).date(),
+        await send_report(message.chat.id, (border + datetime.timedelta(hours=tz)).date(),
                           (time_now + datetime.timedelta(hours=tz)).date(),
                           mysqldb.get_records(message.chat.id, border), tz)
 
     await util.move_to_state(message, config.State.MAIN_MENU, util.main_menu, data['menu'])
 
 
-async def send_report(message, start_date, end_date, records, tz):
+async def send_report(chat_id, start_date, end_date, records, tz):
     with tempfile.TemporaryDirectory() as directory:
         filename = data['report']['name'] + util.reformat_date(start_date) + '-' + util.reformat_date(end_date) + '.pdf'
         path = directory + r'\report'
@@ -311,8 +311,8 @@ async def send_report(message, start_date, end_date, records, tz):
             end_date)
         util.generate_pdf(title, data['report']['title'][2], records, tz, path, data['report']['months'])
         f = types.InputFile(path + '.pdf', filename)
-        mysqldb.set_last_stat_time(message.chat.id, datetime.datetime.utcnow())
-        await bot.send_document(message.chat.id, f)
+        mysqldb.set_last_stat_time(chat_id, datetime.datetime.utcnow())
+        await bot.send_document(chat_id, f)
 
 
 if __name__ == "__main__":

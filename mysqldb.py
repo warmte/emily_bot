@@ -84,6 +84,15 @@ def get_ntfs_list(time):
         return None
 
 
+def get_users_list():
+    try:
+        db.execute('SELECT `chat_key` from `Users`')
+        return db.fetchall()
+    except Exception as e:
+        logging.error(' GET_USERS_LIST ' + str(e))
+        return None
+
+
 # ------------------------------------
 #               RECORDS
 # ------------------------------------

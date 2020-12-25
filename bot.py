@@ -88,7 +88,7 @@ async def send_text(message):
         td = datetime.timedelta(hours=mysqldb.get_timezone(message.chat.id))
         last_record_time = mysqldb.get_last_stat_time(message.chat.id)
         if last_record_time is not None and (
-                (datetime.datetime.utcnow() + td).date() >= (last_record_time + td).date()):
+                (datetime.datetime.utcnow() + td).date() <= (last_record_time + td).date()):
             await util.move_to_state(message, config.State.MAIN_MENU, util.main_menu, data['stat']['time_limit'])
             return
         await util.move_to_state(message, config.State.GET_STAT, util.stat_menu, data['stat']['info'])

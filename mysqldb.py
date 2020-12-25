@@ -12,7 +12,7 @@ from config import database as db
 
 def add_user(chat_id):
     try:
-        db.execute('INSERT INTO `Users`(`chat_key`) VALUES (%s)', str(config.count_key(chat_id)))
+        db.execute('INSERT INTO `Users`(`chat_key`) VALUES (%s)', str(chat_id))
         return True
     except Exception as e:
         logging.error(str(chat_id) + ' ADD_USER ' + str(e))
@@ -22,7 +22,7 @@ def add_user(chat_id):
 def set_info(chat_id, value, field):
     request = 'UPDATE `Users` SET `' + field + '` = %s WHERE `chat_key` = %s'
     try:
-        db.execute(request, (str(value), config.count_key(chat_id)))
+        db.execute(request, (str(value), chat_id))
         return True
     except Exception as e:
         logging.error(str(chat_id) + ' SET_INFO ' + str(e))
@@ -43,7 +43,7 @@ def set_last_stat_time(chat_id, value):
 
 def get_info(chat_id):
     try:
-        db.execute('SELECT * FROM `Users` WHERE `chat_key` = %s', config.count_key(chat_id))
+        db.execute('SELECT * FROM `Users` WHERE `chat_key` = %s', chat_id)
         return db.fetchall()[0]
     except Exception as e:
         logging.error(str(chat_id) + ' GET_INFO ' + str(e))
@@ -67,8 +67,7 @@ def get_last_stat_time(chat_id):
 
 def remove_ntfs(chat_id):
     try:
-        db.execute(
-            'UPDATE `Users` SET `ntfs`=NULL WHERE `chat_key` = %s', config.count_key(chat_id))
+        db.execute('UPDATE `Users` SET `ntfs`=NULL WHERE `chat_key` = %s', chat_id)
         return True
     except Exception as e:
         logging.error(str(chat_id) + ' REMOVE_NTFS ' + str(e))
@@ -91,8 +90,9 @@ def get_ntfs_list(time):
 
 def add_record(chat_id, emotion, note):
     try:
-        db.execute('INSERT INTO `Records`(`chat_key`, `emotion`, `note`) VALUES (%s, %s, %s)',
-                   (str(config.count_key(chat_id)), str(em_config.get(emotion)), note))
+        db.execute(
+            'INSERT INTO `Records`(`chat_key`, `emotion`, `note`) VALUES (%s, %s, %s)',
+            (str(chat_id), str(em_config.get(emotion)), config.encode(note)))
         return True
     except Exception as e:
         logging.error(str(chat_id) + ' ADD_RECORD ' + str(e))
@@ -101,7 +101,7 @@ def add_record(chat_id, emotion, note):
 
 def get_last_record_time(chat_id):
     try:
-        db.execute('SELECT max(`timestamp`) from `Records` WHERE `chat_key` = %s', config.count_key(chat_id))
+        db.execute('SELECT max(`timestamp`) from `Records` WHERE `chat_key` = %s', chat_id)
         return db.fetchall()[0]['max(`timestamp`)']
     except Exception as e:
         logging.error(str(chat_id) + ' GET_LAST_RECORD_TIME ' + str(e))
@@ -110,8 +110,9 @@ def get_last_record_time(chat_id):
 
 def get_records(chat_id, datetime):
     try:
-        db.execute('SELECT * FROM `Records` WHERE `chat_key` = %s AND `timestamp` >= %s ORDER BY `timestamp` DESC',
-                   (config.count_key(chat_id), str(datetime)))
+        db.execute(
+            'SELECT * FROM `Records` WHERE `chat_key` = %s AND `timestamp` >= %s ORDER BY `timestamp` DESC',
+            (chat_id, str(datetime)))
         return db.fetchall()
     except Exception as e:
         logging.error(str(chat_id) + ' GET_RECORDS ' + str(e))
@@ -120,8 +121,7 @@ def get_records(chat_id, datetime):
 
 def delete_stat_by_chat_id(chat_id, datetime):
     try:
-        db.execute('DELETE FROM `Records` WHERE `chat_key` = %s AND `timestamp`<= %s', (config.count_key(chat_id),
-                                                                                        str(datetime)))
+        db.execute('DELETE FROM `Records` WHERE `chat_key` = %s AND `timestamp`<= %s', (chat_id, str(datetime)))
         return True
     except Exception as e:
         logging.error(str(chat_id) + ' DELETE_STAT ' + str(e))

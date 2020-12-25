@@ -134,7 +134,8 @@ def generate_pdf(title, subtitle, records, tz, filename, months):
         l_date = datetime.datetime(1000, 1, 1).date()
         for record in records:
             time = record['timestamp'] + datetime.timedelta(hours=tz)
-            note = r'\\' + pyl.utils.escape_latex(record['note']) if len(record['note']) > 0 else ''
+            rnote = config.decode(record['note'])
+            note = r'\\' + pyl.utils.escape_latex(rnote) if len(rnote) > 0 else ''
             date = ''
             if time.date() != l_date:
                 date = line_s + r'{' + str(time.day) + ' ' + months[time.month - 1] + r'}' + line_e
